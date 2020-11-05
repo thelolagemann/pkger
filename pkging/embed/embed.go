@@ -2,21 +2,21 @@ package embed
 
 import (
 	"bytes"
-	"compress/gzip"
-	"encoding/hex"
+	"encoding/base64"
 	"io"
 
 	"github.com/markbates/pkger/here"
+	"github.com/ulikunitz/xz/lzma"
 )
 
 func Decode(src []byte) ([]byte, error) {
-	dst := make([]byte, hex.DecodedLen(len(src)))
-	_, err := hex.Decode(dst, src)
+	dst := make([]byte, base64.RawStdEncoding.DecodedLen(len(src)))
+	_, err := base64.RawStdEncoding.Decode(dst, src)
 	if err != nil {
 		return nil, err
 	}
 
-	r, err := gzip.NewReader(bytes.NewReader(dst))
+	r, err := lzma.NewReader2(bytes.NewReader(dst))
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +30,11 @@ func Decode(src []byte) ([]byte, error) {
 
 func Encode(b []byte) ([]byte, error) {
 	bb := &bytes.Buffer{}
-	gz := gzip.NewWriter(bb)
+	gz, err := lzma.NewWriter2(bb)
+
+	if err != nil {
+		return nil, err
+	}
 
 	if _, err := gz.Write(b); err != nil {
 		return nil, err
@@ -44,7 +48,7 @@ func Encode(b []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	s := hex.EncodeToString(bb.Bytes())
+	s := base64.RawStdEncoding.EncodeToString(bb.Bytes())
 	return []byte(s), nil
 }
 
